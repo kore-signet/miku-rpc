@@ -1,4 +1,4 @@
-use crate::RPCMessage;
+use crate::{types::DeviceList, Call, Response};
 use epoll_rs::{Epoll, Opts as PollOpts};
 use miniserde::{json, Deserialize, Serialize};
 use std::collections::VecDeque;
@@ -36,22 +36,30 @@ impl DeviceBus {
         })
     }
 
-    pub fn call<T: Serialize + Deserialize, R: Serialize + Deserialize>(
-        &mut self,
-        msg: &RPCMessage<T>,
-    ) -> io::Result<RPCMessage<R>> {
+    pub fn call<T: Serialize, R: Deserialize>(&mut self, msg: &Call<T>) -> io::Result<Response<R>> {
         self.flush()?;
         self.write_message(msg)?;
         self.read_message()
     }
 
-    fn write_message<T: Serialize + Deserialize>(&mut self, msg: &RPCMessage<T>) -> io::Result<()> {
+    /// Utility method to find a device id for a certain device type.
+    pub fn find(&mut self, kind: impl Into<String>) -> io::Result<Option<String>> {
+        let device_list: DeviceList = self.call(&Call::list())?;
+        let kind = kind.into();
+        Ok(device_list
+            .data
+            .into_iter()
+            .find(|v| v.type_names.contains(&kind))
+            .map(|v| v.device_id))
+    }
+
+    fn write_message<T: Serialize>(&mut self, msg: &Call<T>) -> io::Result<()> {
         self.file
             .write_all(format!("\0{}\0", json::to_string(msg)).as_bytes())?;
         Ok(())
     }
 
-    fn read_message<R: Serialize + Deserialize>(&mut self) -> io::Result<RPCMessage<R>> {
+    fn read_message<R: Deserialize>(&mut self) -> io::Result<Response<R>> {
         let mut res: Vec<u8> = Vec::new();
         self.read_one()?; // discard initial null byte
 

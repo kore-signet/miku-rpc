@@ -1,12 +1,12 @@
-use crate::RPCMessage;
+use crate::Response;
 use miniserde::{Deserialize, Serialize};
 
-pub type DeviceList = RPCMessage<Vec<DeviceData>>;
+pub type DeviceList = Response<Vec<DeviceData>>;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DeviceData {
     #[serde(rename = "deviceId")]
-    device_id: String,
+    pub device_id: String,
     #[serde(rename = "typeNames")]
-    type_names: Vec<String>,
+    pub type_names: Vec<String>,
 }
