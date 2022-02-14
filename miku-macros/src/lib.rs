@@ -12,7 +12,7 @@ mod kw {
     syn::custom_keyword!(docs);
 }
 
-const OC2_DOC_BASE: &str = "https://github.com/fnuecke/oc2/blob/1.18-forge/src/main/resources/assets/oc2/doc/en_us/index.md";
+const OC2_DOC_BASE: &str = "https://github.com/fnuecke/oc2/blob/1.18-forge/src/main/resources/assets/oc2/doc/en_us/";
 
 struct FnDef(Signature, Vec<Attribute>);
 impl Parse for FnDef {
