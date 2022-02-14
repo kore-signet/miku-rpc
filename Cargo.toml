@@ -1,16 +1,7 @@
-[package]
-name = "miku-rpc"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-epoll-rs = "0.2.1"
-termios = "0.3"
-miniserde = "0.1"
+[workspace]
+members = ["miku-rpc", "miku-macros"]
 
 [profile.release]
 panic = "abort"
 codegen-units = 1
 lto = true
-
-# Z build-std-features=panic_immediate_abort for smaller binary!

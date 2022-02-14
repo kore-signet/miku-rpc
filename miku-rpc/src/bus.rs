@@ -1,4 +1,4 @@
-use crate::{types::DeviceList, Call, Response};
+use crate::{types::DeviceList, wrappers::IdentifiedDevice, Call, Response};
 use epoll_rs::{Epoll, Opts as PollOpts};
 use miniserde::{json, Deserialize, Serialize};
 use std::collections::VecDeque;
@@ -42,14 +42,18 @@ impl DeviceBus {
         self.read_message()
     }
 
+    /// Utility method to create a wrapper for a device of a certain type.
+    pub fn wrap<T: IdentifiedDevice>(&mut self) -> io::Result<Option<T>> {
+        Ok(self.find(T::IDENTITY)?.map(T::from_id))
+    }
+
     /// Utility method to find a device id for a certain device type.
-    pub fn find(&mut self, kind: impl Into<String>) -> io::Result<Option<String>> {
+    pub fn find(&mut self, kind: &str) -> io::Result<Option<String>> {
         let device_list: DeviceList = self.call(&Call::list())?;
-        let kind = kind.into();
         Ok(device_list
             .data
             .into_iter()
-            .find(|v| v.type_names.contains(&kind))
+            .find(|v| v.type_names.iter().any(|s| s == kind))
             .map(|v| v.device_id))
     }
 

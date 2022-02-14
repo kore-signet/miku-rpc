@@ -1,5 +1,6 @@
 pub mod bus;
 pub mod types;
+pub mod wrappers;
 use miniserde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
@@ -33,14 +34,14 @@ pub struct InvokeCall<'a> {
     device_id: &'a str,
     #[serde(rename = "name")]
     method_name: &'a str,
-    parameters: Vec<&'a dyn Serialize>,
+    parameters: &'a [&'a dyn Serialize],
 }
 
 impl Call<'_, InvokeCall<'_>> {
     pub fn invoke<'a>(
         device_id: &'a str,
         method_name: &'a str,
-        parameters: Vec<&'a dyn Serialize>,
+        parameters: &'a [&'a dyn Serialize],
     ) -> Call<'static, InvokeCall<'a>> {
         Call {
             msg_type: "invoke",
