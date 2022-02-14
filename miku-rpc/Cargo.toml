@@ -2,6 +2,10 @@
 name = "miku-rpc"
 version = "0.1.0"
 edition = "2021"
+license-file =  "../LICENSE"
+readme = "../README.md"
+description = "an implementation of the opencomputers 2 RPC api"
+repository = "https://github.com/allie-signet/miku-rpc"
 
 [dependencies]
 epoll-rs = "0.2.1"
