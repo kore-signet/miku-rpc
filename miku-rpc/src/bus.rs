@@ -11,6 +11,7 @@ use std::str;
 use std::time::Duration;
 use termios::*;
 
+/// A bus interface to the HLApi
 pub struct DeviceBus {
     file: File,
     buffer: VecDeque<u8>,
@@ -36,6 +37,7 @@ impl DeviceBus {
         })
     }
 
+    /// Calls a HLApi method and gets its response.
     pub fn call<T: Serialize, R: Deserialize>(&mut self, msg: &Call<T>) -> io::Result<Response<R>> {
         self.flush()?;
         self.write_message(msg)?;

@@ -1,10 +1,10 @@
-use miku_rpc::bus::DeviceBus;
 use miku_rpc::wrappers::*;
+use miku_rpc::DeviceBus;
 
 fn main() -> std::io::Result<()> {
     let mut bus = DeviceBus::new("/dev/hvc0")?;
     let redstone_side = std::env::args().nth(1).unwrap();
-    let redstone_card = bus.wrap::<RedstoneCard>()?.unwrap();
+    let redstone_card = bus.wrap::<RedstoneDevice>()?.unwrap();
 
     println!(
         "{}",

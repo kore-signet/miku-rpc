@@ -1,9 +1,16 @@
-pub mod bus;
+//! A crate implementing the OpenComputers 2 HLApi interface.
+
+mod bus;
+pub use bus::DeviceBus;
+
+/// Type definitions for commonly used responses.
 pub mod types;
+/// Wrappers around specific HLApi devices and their methods.
 pub mod wrappers;
 use miniserde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
+/// A HLApi call, composed of a type and some json serializable data.
 pub struct Call<'a, T: Serialize> {
     #[serde(rename = "type")]
     pub msg_type: &'a str,
@@ -29,6 +36,7 @@ impl Call<'_, &str> {
 }
 
 #[derive(Serialize)]
+/// A HLApi call that invokes a method on a specific device.
 pub struct InvokeCall<'a> {
     #[serde(rename = "deviceId")]
     device_id: &'a str,
@@ -55,6 +63,7 @@ impl Call<'_, InvokeCall<'_>> {
 }
 
 #[derive(Deserialize)]
+/// The response to a HLApi call.
 pub struct Response<T: Deserialize> {
     #[serde(rename = "type")]
     pub msg_type: String,
