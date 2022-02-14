@@ -5,33 +5,45 @@ use syn::punctuated::Punctuated;
 use syn::{
     bracketed, parse_macro_input,
     token::{self, Comma},
-    FnArg, Ident, LitStr, Pat, Path, Result, Token, Type,
+    FnArg, Ident, LitStr, Pat, Path, Result, ReturnType, Token, Type, Generics
 };
 
 struct MethodData {
     rust_name: Ident,
     ret_type: Box<Type>,
+    generics: Generics,
     method_name: LitStr, // oc2 method
-    _bracket_token: token::Bracket,
     args: Punctuated<FnArg, Comma>,
 }
 
 impl Parse for MethodData {
     fn parse(input: ParseStream) -> Result<Self> {
         let rust_name = input.parse::<Ident>()?;
-        input.parse::<Token![->]>()?;
-        let ret_type = input.parse::<Box<Type>>()?;
-        input.parse::<Comma>()?;
-        let method_name = input.parse::<LitStr>()?;
-        input.parse::<Comma>()?;
+        let generics = input.parse::<Generics>()?;
 
-        let content;
+        let ret_type = if let ReturnType::Type(_, t) = input.parse::<ReturnType>()? {
+            t
+        } else {
+            return Err(input.error("return type needs to be specified"));
+        };
+
+
+        input.parse::<Token![;]>()?;
+        let method_name = input.parse::<LitStr>()?;
+
+        let args = if input.is_empty() {
+            Punctuated::new()
+        } else {
+            input.parse::<Token![;]>()?;
+            input.parse_terminated(FnArg::parse)?
+        };
+
         Ok(MethodData {
             method_name,
             rust_name,
             ret_type,
-            _bracket_token: bracketed!(content in input),
-            args: content.parse_terminated(FnArg::parse)?,
+            generics,
+            args,
         })
     }
 }
@@ -41,6 +53,7 @@ pub fn rpc(tokens: TokenStream) -> TokenStream {
     let MethodData {
         method_name,
         rust_name,
+        generics,
         ret_type,
         args,
         ..
@@ -59,7 +72,7 @@ pub fn rpc(tokens: TokenStream) -> TokenStream {
     let arg_defs = args.into_iter();
 
     let tokens = quote! {
-        fn #rust_name(&self, bus: &mut  crate::bus::DeviceBus, #(#arg_defs),*) -> std::io::Result<#ret_type> {
+        fn #rust_name #generics (&self, bus: &mut  crate::bus::DeviceBus, #(#arg_defs),*) -> std::io::Result<#ret_type> {
             let response: crate::Response<#ret_type> = bus.call(&crate::Call::invoke(self.id(), #method_name, &[#(&#arg_idents),*]))?;
             Ok(response.data)
         }
