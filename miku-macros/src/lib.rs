@@ -90,7 +90,7 @@ pub fn rpc(attr: TokenStream, input: TokenStream) -> TokenStream {
     let tokens = quote! {
         #doc_path
         #(#attrs)*
-        fn #ident #generics (&self, bus: &mut crate::bus::DeviceBus, #(#arg_defs),*) -> std::io::Result<#ret_type> #where_clause {
+        fn #ident #generics (&self, bus: &mut crate::DeviceBus, #(#arg_defs),*) -> std::io::Result<#ret_type> #where_clause {
             let response: crate::Response<#ret_type> = bus.call(&crate::Call::invoke(self.id(), #oc_method_name, &[#(&#arg_idents),*]))?;
             Ok(response.data)
         }
