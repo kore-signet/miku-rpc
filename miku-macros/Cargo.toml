@@ -5,6 +5,7 @@ edition = "2021"
 license-file = "../LICENSE"
 description = "procedural macros for miku-rpc"
 readme = "README.md"
+repository = "https://github.com/allie-signet/miku-rpc"
 
 [lib]
 proc-macro = true
