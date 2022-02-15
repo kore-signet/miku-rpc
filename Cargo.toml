@@ -1,7 +1,8 @@
 [workspace]
-members = ["miku-rpc", "miku-macros"]
+members = ["miku-rpc", "miku-macros", "utils"]
 
 [profile.release]
 panic = "abort"
 codegen-units = 1
 lto = true
+opt-level = "s"

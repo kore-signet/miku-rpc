@@ -1,3 +1,4 @@
+use crate::types::ImportFileInfo;
 use miku_macros::{define_device, rpc};
 use miniserde::Deserialize;
 
@@ -76,6 +77,29 @@ pub trait SoundInterface: RPCDevice {
     fn play_sound(name: &str);
 }
 
+pub trait FileImportExport: RPCDevice {
+    #[rpc("requestImportFile")]
+    fn request_import_file() -> bool;
+
+    #[rpc("beginImportFile")]
+    fn begin_import_file() -> Option<ImportFileInfo>;
+
+    #[rpc("readImportFile")]
+    fn read_import_file() -> Option<Vec<u8>>;
+
+    #[rpc("beginExportFile")]
+    fn begin_export_file(name: &str);
+
+    #[rpc("writeExportFile")]
+    fn write_export_file(data: &[u8]);
+
+    #[rpc("finishExportFile")]
+    fn finish_export_file();
+
+    #[rpc("reset")]
+    fn reset();
+}
+
 define_device!(
     RedstoneDevice,
     "redstone",
@@ -87,4 +111,10 @@ define_device!(
     "sound",
     "A device capable of playing sounds",
     [SoundInterface]
+);
+define_device!(
+    FileImportExportCard,
+    "file_import_export",
+    "A device capable of importing and exporting files",
+    [FileImportExport]
 );

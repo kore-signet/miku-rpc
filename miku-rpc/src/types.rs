@@ -10,3 +10,9 @@ pub struct DeviceData {
     #[serde(rename = "typeNames")]
     pub type_names: Vec<String>,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ImportFileInfo {
+    pub name: String,
+    pub size: u64,
+}
