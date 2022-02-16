@@ -1,7 +1,7 @@
 use crate::{types::DeviceList, wrappers::IdentifiedDevice, Call, Response};
 use epoll_rs::{Epoll, Opts as PollOpts};
 use miniserde::{json, Deserialize, Serialize};
-use std::collections::VecDeque;
+
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::os::unix::io::AsRawFd;
@@ -14,7 +14,8 @@ use termios::*;
 /// A bus interface to the HLApi
 pub struct DeviceBus {
     file: File,
-    buffer: VecDeque<u8>,
+    buffer: [u8; 1024],
+    string_buf: String,
     poller: Epoll,
 }
 
@@ -32,7 +33,8 @@ impl DeviceBus {
 
         Ok(DeviceBus {
             file: inner_f,
-            buffer: VecDeque::with_capacity(1024),
+            buffer: [0; 1024],
+            string_buf: String::with_capacity(2048),
             poller,
         })
     }
@@ -41,6 +43,13 @@ impl DeviceBus {
     pub fn call<T: Serialize, R: Deserialize>(&mut self, msg: &Call<T>) -> io::Result<Response<R>> {
         self.flush()?;
         self.write_message(msg)?;
+        self.read_message()
+    }
+
+    /// Calls a HLApi method and gets its response. Uses a pre-serialized string to help with optimizations for zero-argument functions.
+    pub fn call_preserialized<R: Deserialize>(&mut self, msg: &[u8]) -> io::Result<Response<R>> {
+        self.flush()?;
+        self.file.write_all(msg)?;
         self.read_message()
     }
 
@@ -66,69 +75,50 @@ impl DeviceBus {
     }
 
     fn read_message<R: Deserialize>(&mut self) -> io::Result<Response<R>> {
-        let mut res: Vec<u8> = Vec::new();
-        self.read_one()?; // discard initial null byte
+        let mut bytes_read = self.read()?;
 
-        loop {
-            let next = self.read_one()?;
-            if next == 0 {
-                break;
+        if unsafe { *self.buffer.get_unchecked(bytes_read - 1) } != 0u8 {
+            self.string_buf
+                .push_str(unsafe { str::from_utf8_unchecked(&self.buffer[1..bytes_read]) });
+
+            loop {
+                bytes_read = self.read()?;
+
+                if unsafe { *self.buffer.get_unchecked(bytes_read - 1) } == 0u8 {
+                    self.string_buf.push_str(unsafe {
+                        str::from_utf8_unchecked(&self.buffer[..bytes_read - 1])
+                    });
+                    break;
+                } else {
+                    self.string_buf
+                        .push_str(unsafe { str::from_utf8_unchecked(&self.buffer[..bytes_read]) });
+                }
             }
-
-            res.push(next);
+        } else {
+            self.string_buf
+                .push_str(unsafe { str::from_utf8_unchecked(&self.buffer[1..bytes_read - 1]) });
         }
 
-        str::from_utf8(&res)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
-            .and_then(|v| {
-                json::from_str(v).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
-            })
+        json::from_str(&self.string_buf).map_err(|_| io::Error::from(io::ErrorKind::InvalidData))
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.buffer.clear();
-        let mut pain: [u8; 1] = [0; 1];
+        self.string_buf.clear();
+
         while self
             .poller
             .wait_one_timeout(Duration::from_secs(0))?
             .is_some()
         {
-            self.file.read_exact(&mut pain)?;
+            self.file.read(&mut self.buffer)?;
         }
 
         Ok(())
     }
 
-    fn fill_buffer(&mut self) -> io::Result<()> {
+    #[inline(always)]
+    fn read(&mut self) -> io::Result<usize> {
         self.poller.wait_one()?;
-        self.buffer.clear();
-
-        // lol. lmao
-        let mut pain: [u8; 1] = [0; 1];
-
-        while self.buffer.len() < 1024
-            && self
-                .poller
-                .wait_one_timeout(Duration::from_secs(0))?
-                .is_some()
-        {
-            self.file.read_exact(&mut pain)?;
-            self.buffer.push_back(pain[0]);
-        }
-
-        Ok(())
-    }
-
-    fn read_one(&mut self) -> io::Result<u8> {
-        if self.buffer.is_empty() {
-            self.fill_buffer()?;
-        }
-
-        self.buffer.pop_front().ok_or_else(|| {
-            io::Error::new(
-                io::ErrorKind::UnexpectedEof,
-                "unexpected end of read buffer for tty - maybe an error with the method invoked?",
-            )
-        })
+        self.file.read(&mut self.buffer)
     }
 }

@@ -86,14 +86,43 @@ pub fn rpc(attr: TokenStream, input: TokenStream) -> TokenStream {
             }
         })
         .collect();
-    let arg_defs = inputs.into_iter();
 
-    let tokens = quote! {
-        #doc_path
-        #(#attrs)*
-        fn #ident #generics (&self, bus: &mut crate::DeviceBus, #(#arg_defs),*) -> std::io::Result<#ret_type> #where_clause {
-            let response: crate::Response<#ret_type> = bus.call(&crate::Call::invoke(self.id(), #oc_method_name, &[#(&#arg_idents),*]))?;
-            Ok(response.data)
+    let tokens = if arg_idents.is_empty() {
+        let mut call_bytes = (String::from("\0")
+            + &format!(
+                r#"{{"type":"invoke","data":{{"name":"{}","parameters": [],"deviceId":""#,
+                oc_method_name.value()
+            ))
+            .into_bytes();
+        let call_start_len = call_bytes.len();
+        let call_id_end_len = call_start_len + 36;
+        call_bytes.extend(std::iter::repeat(0).take(36));
+        call_bytes.extend(b"\"}}\0");
+        let call_full_len = call_bytes.len();
+
+        let call_iter = call_bytes.into_iter();
+
+        quote! {
+            #doc_path
+            #(#attrs)*
+            fn #ident #generics (&self, bus: &mut crate::DeviceBus) -> std::io::Result<#ret_type> #where_clause {
+                let mut call_bytes: [u8; #call_full_len ] = [ #(#call_iter),* ];
+                call_bytes[ #call_start_len .. #call_id_end_len].copy_from_slice(self.id().as_bytes());
+
+                let response: crate::Response<#ret_type> = bus.call_preserialized(&call_bytes)?;
+                Ok(response.data)
+            }
+        }
+    } else {
+        let arg_defs = inputs.into_iter();
+
+        quote! {
+            #doc_path
+            #(#attrs)*
+            fn #ident #generics (&self, bus: &mut crate::DeviceBus, #(#arg_defs),*) -> std::io::Result<#ret_type> #where_clause {
+                let response: crate::Response<#ret_type> = bus.call(&crate::Call::invoke(self.id(), #oc_method_name, &[#(&#arg_idents),*]))?;
+                Ok(response.data)
+            }
         }
     };
 

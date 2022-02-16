@@ -2,7 +2,7 @@ use miku_rpc::wrappers::{FileImportExport, FileImportExportCard};
 use miku_rpc::DeviceBus;
 use std::env;
 use std::fs::OpenOptions;
-use std::io::{self, BufWriter, Write};
+use std::io::{self, Write};
 use std::time::Instant;
 
 fn main() -> io::Result<()> {
@@ -13,7 +13,7 @@ fn main() -> io::Result<()> {
         return Ok(());
     };
 
-    let out_f = OpenOptions::new()
+    let mut out = OpenOptions::new()
         .write(true)
         .create(true)
         .open(&out_path)?;
@@ -39,9 +39,6 @@ fn main() -> io::Result<()> {
             info.name, info.size
         )?;
 
-        out_f.set_len(info.size)?;
-        let mut out = BufWriter::new(out_f);
-
         let mut offset: usize = 0;
         let mut last_printed_percent: usize = 0;
 
@@ -57,11 +54,10 @@ fn main() -> io::Result<()> {
             }
         }
 
-        out.flush()?;
+        out.sync_all()?;
 
         writeln!(stderr, "imported file in {:?}", start.elapsed())?;
     }
 
-    writeln!(stderr, "imported")?;
     Ok(())
 }
