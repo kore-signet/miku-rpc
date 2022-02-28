@@ -3,14 +3,39 @@ use miku_rpc::DeviceBus;
 use std::env;
 use std::fs::OpenOptions;
 use std::io::{self, Write};
+use std::path::PathBuf;
 use std::time::Instant;
 
 fn main() -> io::Result<()> {
     let out_path = if let Some(path) = env::args().nth(1) {
-        path
+        PathBuf::from(&path)
     } else {
         println!("please specify a file to write to");
         return Ok(());
+    };
+
+    let mut path_buffer = String::new();
+
+    let out_path = if out_path.exists() {
+        let stdin = io::stdin();
+
+        loop {
+            path_buffer.clear();
+            println!("file already exists! [A]bort, [O]verwrite or [R]ename?");
+            stdin.read_line(&mut path_buffer)?;
+            match path_buffer.trim() {
+                "A" => return Ok(()),
+                "O" => break out_path,
+                "R" => {
+                    println!("ok! what do you want the new file renamed to?");
+                    stdin.read_line(&mut path_buffer)?;
+                    break PathBuf::from(&path_buffer.trim());
+                }
+                _ => continue,
+            }
+        }
+    } else {
+        out_path
     };
 
     let mut out = OpenOptions::new()

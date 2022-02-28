@@ -1,6 +1,8 @@
-use crate::{types::DeviceList, wrappers::IdentifiedDevice, Call, Response};
+#[cfg(feature = "wrappers")]
+use crate::wrappers::IdentifiedDevice;
+use crate::{types::DeviceList, Call, Response};
 use epoll_rs::{Epoll, Opts as PollOpts};
-use miniserde::{json, Deserialize, Serialize};
+use miniserde_miku::{json, Deserialize, Serialize};
 
 use std::fs::File;
 use std::io::{self, Read, Write};
@@ -11,10 +13,13 @@ use std::str;
 use std::time::Duration;
 use termios::*;
 
+use arrayvec::ArrayString;
+
 /// A bus interface to the HLApi
 pub struct DeviceBus {
     file: File,
-    buffer: [u8; 1024],
+    buffer: [u8; 4096],
+    write_buffer: ArrayString<4096>,
     string_buf: String,
     poller: Epoll,
 }
@@ -33,8 +38,9 @@ impl DeviceBus {
 
         Ok(DeviceBus {
             file: inner_f,
-            buffer: [0; 1024],
+            buffer: [0; 4096],
             string_buf: String::with_capacity(2048),
+            write_buffer: ArrayString::<4096>::new(),
             poller,
         })
     }
@@ -54,6 +60,7 @@ impl DeviceBus {
     }
 
     /// Utility method to create a wrapper for a device of a certain type.
+    #[cfg(feature = "wrappers")]
     pub fn wrap<T: IdentifiedDevice>(&mut self) -> io::Result<Option<T>> {
         Ok(self.find(T::IDENTITY)?.map(T::from_id))
     }
@@ -69,8 +76,14 @@ impl DeviceBus {
     }
 
     fn write_message<T: Serialize>(&mut self, msg: &Call<T>) -> io::Result<()> {
-        self.file
-            .write_all(format!("\0{}\0", json::to_string(msg)).as_bytes())?;
+        self.write_buffer.clear();
+        self.write_buffer.push('\0');
+        let start = std::time::Instant::now();
+        json::to_string::<_, 4096, 16384>(msg, &mut self.write_buffer);
+        println!("{:?}", start.elapsed());
+        self.write_buffer.push('\0');
+
+        self.file.write_all(self.write_buffer.as_bytes())?;
         Ok(())
     }
 

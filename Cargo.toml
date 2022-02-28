@@ -1,5 +1,5 @@
 [workspace]
-members = ["miku-rpc", "miku-macros", "utils"]
+members = ["miku-rpc", "miku-macros", "miku-tools"]
 
 [profile.release]
 panic = "abort"

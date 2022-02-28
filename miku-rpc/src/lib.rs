@@ -6,8 +6,9 @@ pub use bus::DeviceBus;
 /// Type definitions for commonly used responses.
 pub mod types;
 /// Wrappers around specific HLApi devices and their methods.
+#[cfg(feature = "wrappers")]
 pub mod wrappers;
-use miniserde::{Deserialize, Serialize};
+use miniserde_miku::{Deserialize, Serialize};
 
 #[derive(Serialize)]
 /// A HLApi call, composed of a type and some json serializable data.

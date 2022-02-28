@@ -1,6 +1,6 @@
 use crate::types::{ImportFileInfo, MoveDirection, RobotActionResult, RotationDirection};
 use miku_macros::{define_device, rpc};
-use miniserde::Deserialize;
+use miniserde_miku::Deserialize;
 use std::io;
 use std::thread;
 use std::time::Duration;
@@ -83,7 +83,7 @@ pub trait SoundInterface: RPCDevice {
 
     #[rpc("playSound", docs = "item/sound_card.md")]
     /// plays back the sound effect with the specified name.
-    fn play_sound(name: &str);
+    fn play_sound(name: &str, volume: f64, pitch: f64);
 }
 
 /// An interface that allows exporting and importing files.

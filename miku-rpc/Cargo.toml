@@ -10,8 +10,11 @@ repository = "https://github.com/allie-signet/miku-rpc"
 [dependencies]
 epoll-rs = "0.2.1"
 termios = "0.3"
-miniserde = "0.1"
+miniserde-miku = "0.1"
 miku-macros = { path = "../miku-macros", version = "0.1.2" }
+arrayvec = "0.7"
 
-
+[features]
+default = ["wrappers"]
+wrappers = []
 # Z build-std-features=panic_immediate_abort for smaller binary!

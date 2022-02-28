@@ -1,7 +1,7 @@
 use crate::Response;
-use miniserde::de::Visitor;
-use miniserde::ser::Fragment;
-use miniserde::{make_place, Deserialize, Result as MiniserdeResult, Serialize};
+use miniserde_miku::de::Visitor;
+use miniserde_miku::ser::Fragment;
+use miniserde_miku::{make_place, Deserialize, Result as MiniserdeResult, Serialize};
 use std::borrow::Cow;
 
 make_place!(Place);
