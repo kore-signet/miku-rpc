@@ -78,9 +78,7 @@ impl DeviceBus {
     fn write_message<T: Serialize>(&mut self, msg: &Call<T>) -> io::Result<()> {
         self.write_buffer.clear();
         self.write_buffer.push('\0');
-        let start = std::time::Instant::now();
         json::to_string::<_, 4096, 16384>(msg, &mut self.write_buffer);
-        println!("{:?}", start.elapsed());
         self.write_buffer.push('\0');
 
         self.file.write_all(self.write_buffer.as_bytes())?;
