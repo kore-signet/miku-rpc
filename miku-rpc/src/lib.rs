@@ -8,29 +8,32 @@ pub mod types;
 /// Wrappers around specific HLApi devices and their methods.
 #[cfg(feature = "wrappers")]
 pub mod wrappers;
-use miniserde_miku::{Deserialize, Serialize};
+use miniserde_miku::Serialize;
+
+mod response;
+pub use response::*;
 
 #[derive(Serialize)]
 /// A HLApi call, composed of a type and some json serializable data.
-pub struct Call<'a, T: Serialize> {
+pub struct Call<T: Serialize> {
     #[serde(rename = "type")]
-    pub msg_type: &'a str,
+    pub msg_type: MessageType,
     pub data: T,
 }
 
-impl Call<'_, ()> {
-    pub fn list() -> Call<'static, ()> {
+impl Call<()> {
+    pub fn list() -> Call<()> {
         Call {
-            msg_type: "list",
+            msg_type: MessageType::List,
             data: (),
         }
     }
 }
 
-impl Call<'_, &str> {
-    pub fn methods(device_id: &str) -> Call<'static, &str> {
+impl Call<&str> {
+    pub fn methods(device_id: &str) -> Call<&str> {
         Call {
-            msg_type: "methods",
+            msg_type: MessageType::Methods,
             data: device_id,
         }
     }
@@ -46,14 +49,14 @@ pub struct InvokeCall<'a> {
     parameters: &'a [&'a dyn Serialize],
 }
 
-impl Call<'_, InvokeCall<'_>> {
+impl Call<InvokeCall<'_>> {
     pub fn invoke<'a>(
         device_id: &'a str,
         method_name: &'a str,
         parameters: &'a [&'a dyn Serialize],
-    ) -> Call<'static, InvokeCall<'a>> {
+    ) -> Call<InvokeCall<'a>> {
         Call {
-            msg_type: "invoke",
+            msg_type: MessageType::Invoke,
             data: InvokeCall {
                 device_id,
                 method_name,
@@ -61,12 +64,4 @@ impl Call<'_, InvokeCall<'_>> {
             },
         }
     }
-}
-
-#[derive(Deserialize)]
-/// The response to a HLApi call.
-pub struct Response<T: Deserialize> {
-    #[serde(rename = "type")]
-    pub msg_type: String,
-    pub data: T,
 }

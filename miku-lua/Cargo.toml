@@ -1,0 +1,19 @@
+[package]
+name = "miku-lua"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "miku"
+crate-type = ["cdylib"]
+
+[dependencies]
+miku-rpc = { path = "../miku-rpc" }
+miniserde-miku = "0.1"
+parking_lot = "0.12.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dependencies.mlua]
+git = "https://github.com/allie-signet/mlua"
+features = ["lua54", "module", "serde", "serialize"]

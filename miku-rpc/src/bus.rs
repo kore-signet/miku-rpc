@@ -1,6 +1,6 @@
 #[cfg(feature = "wrappers")]
 use crate::wrappers::IdentifiedDevice;
-use crate::{types::DeviceList, Call, Response};
+use crate::{types::DeviceList, Call, RPCResult, Response, WrappedRPCResult};
 use epoll_rs::{Epoll, Opts as PollOpts};
 use miniserde_miku::{json, Deserialize, Serialize};
 
@@ -110,9 +110,14 @@ impl DeviceBus {
                 .push_str(unsafe { str::from_utf8_unchecked(&self.buffer[1..bytes_read - 1]) });
         }
 
-        json::from_str(&self.string_buf).map_err(|_| io::Error::from(io::ErrorKind::InvalidData))
+        let res: RPCResult<R> = json::from_str::<WrappedRPCResult<R>>(&self.string_buf)
+            .map_err(|_| io::Error::from(io::ErrorKind::InvalidData))?
+            .into();
+
+        res.map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
     }
 
+    #[allow(clippy::unused_io_amount)]
     fn flush(&mut self) -> io::Result<()> {
         self.string_buf.clear();
 
